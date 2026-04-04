@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPC Example</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      gap: 2rem;
+      min-height: 100vh;
+    }
+
+    h1 { font-size: 1.5rem; letter-spacing: .03em; color: #a78bfa; }
+
+    /* ── cards ────────────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: #1e2030;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+
+    .card h2 {
+      font-size: .85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #7c85b3;
+    }
+
+    .row {
+      display: flex;
+      gap: .5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: .5rem .75rem;
+      border-radius: 8px;
+      border: 1px solid #3b4068;
+      background: #13152a;
+      color: #e2e8f0;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type="text"]:focus { border-color: #7c5cf6; }
+
+    button {
+      padding: .5rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      background: #7c5cf6;
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    button:hover  { background: #6d4fe0; }
+    button:active { background: #5c3ec9; }
+
+    /* ── log ──────────────────────────────────────────────────── */
+    .log {
+      background: #13152a;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      font-family: monospace;
+      font-size: .82rem;
+      line-height: 1.6;
+      min-height: 5rem;
+      max-height: 10rem;
+      overflow-y: auto;
+      color: #94a3b8;
+      white-space: pre-wrap;
+    }
+
+    .log .info  { color: #60a5fa; }
+    .log .ok    { color: #34d399; }
+    .log .err   { color: #f87171; }
+    .log .bin   { color: #fbbf24; }
+
+    /* ── binary preview ───────────────────────────────────────── */
+    .hex {
+      font-family: monospace;
+      font-size: .78rem;
+      color: #fbbf24;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>WebView IPC Demo</h1>
+
+  <!-- ── Text round-trip ─────────────────────────────────────── -->
+  <div class="card">
+    <h2>Text round-trip &nbsp;(ping → pong)</h2>
+    <div class="row">
+      <input id="pingInput" type="text" value="Hello from JS!" placeholder="message…" />
+      <button id="pingBtn">Send ping</button>
+    </div>
+    <div class="log" id="textLog">Waiting…</div>
+  </div>
+
+  <!-- ── Binary round-trip ───────────────────────────────────── -->
+  <div class="card">
+    <h2>Binary round-trip &nbsp;(binary-in → binary-out, XOR 0xFF)</h2>
+    <div class="row">
+      <input id="binInput" type="text" value="deadbeef" placeholder="hex bytes, e.g. deadbeef" />
+      <button id="binBtn">Send bytes</button>
+    </div>
+    <div class="log" id="binLog">Waiting…</div>
+  </div>
+
+  <script>
+    // ── helpers ────────────────────────────────────────────────────────────────
+
+    function hexToBytes(hex) {
+      hex = hex.replace(/\s+/g, '');
+      if (hex.length % 2 !== 0) hex = '0' + hex;
+      const buf = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < buf.length; i++)
+        buf[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+      return buf;
+    }
+
+    function bytesToHex(buf) {
+      return [...new Uint8Array(buf)]
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join(' ');
+    }
+
+    function appendLog(logEl, cls, text) {
+      const line = document.createElement('span');
+      line.className = cls;
+      line.textContent = text + '\n';
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // ── text round-trip ────────────────────────────────────────────────────────
+
+    const textLog = document.getElementById('textLog');
+    textLog.innerHTML = '';
+
+    document.getElementById('pingBtn').addEventListener('click', () => {
+      const msg = document.getElementById('pingInput').value.trim();
+      if (!msg) return;
+      appendLog(textLog, 'info', `→ ping: "${msg}"`);
+      window.__ui.post('ping', msg);
+    });
+
+    window.__ui.on('pong', (msg) => {
+      appendLog(textLog, 'ok', `← pong: "${msg}"`);
+    });
+
+    // ── binary round-trip ──────────────────────────────────────────────────────
+
+    const binLog = document.getElementById('binLog');
+    binLog.innerHTML = '';
+
+    document.getElementById('binBtn').addEventListener('click', () => {
+      const hex = document.getElementById('binInput').value.trim();
+      let bytes;
+      try {
+        bytes = hexToBytes(hex);
+        if (bytes.length === 0) throw new Error('empty');
+      } catch {
+        appendLog(binLog, 'err', '✗ invalid hex input');
+        return;
+      }
+      appendLog(binLog, 'info', `→ sent (${bytes.length}B): ${bytesToHex(bytes.buffer)}`);
+      window.__ui.post('binary-in', bytes.buffer);
+    });
+
+    window.__ui.on('binary-out', (buf) => {
+      appendLog(binLog, 'bin', `← received (${buf.byteLength}B): ${bytesToHex(buf)}`);
+    });
+  </script>
+</body>
+</html>
