@@ -1,27 +1,20 @@
 # Building ui
 
-## First-time setup — clone vcpkg
+## First-time setup
 
-Run this once from the repo root:
+Nothing to do manually for vcpkg — CMake clones and bootstraps it automatically
+on the first configure. Just call cmake and it handles everything.
 
-```bash
-git clone https://github.com/microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh    # Linux / macOS
-./vcpkg/vcpkg install
-```
-
-```bat
-git clone https://github.com/microsoft/vcpkg.git
-.\vcpkg\bootstrap-vcpkg.bat   # Windows
-.\vcpkg\vcpkg install
-```
+The only things that are never automated are:
+- **Linux** system packages, because they require sudo (see below).
+- **Windows** WebView2 runtime binaries — run the one-time download command
+  below before building.
 
 ---
 
 ## Linux (Ubuntu / Debian)
 
 ### 1. System dependencies
-
 ```bash
 sudo apt update
 sudo apt install -y \
@@ -36,39 +29,31 @@ sudo apt install -y \
 | Package | Provides |
 |---|---|
 | `build-essential` | `g++`, `make`, `libc-dev` |
-| `cmake` | build system (≥ 3.22 required) |
-| `ninja-build` | faster builds, used with `-G Ninja` |
+| `cmake` | build system (>= 3.22 required) |
+| `ninja-build` | faster builds |
 | `pkg-config` | lets CMake locate `webkit2gtk-4.1` |
 | `libgtk-3-dev` | GTK3 headers + libs |
-| `libwebkit2gtk-4.1-dev` | WebKit2GTK headers + libs + `jsc` |
+| `libwebkit2gtk-4.1-dev` | WebKit2GTK headers + libs |
 
-> **Ubuntu version note** — `webkit2gtk-4.1` is available from **22.04 (Jammy)** onward.
-> On 20.04 (Focal) the package is `libwebkit2gtk-4.0-dev` and you must change
-> `webkit2gtk-4.1` to `webkit2gtk-4.0` in `CMakeLists.txt`.
+> **Ubuntu version note** — `webkit2gtk-4.1` is available from **22.04 (Jammy)**
+> onward. On 20.04 (Focal) the package is `libwebkit2gtk-4.0-dev` and you must
+> change `webkit2gtk-4.1` to `webkit2gtk-4.0` in `CMakeLists.txt`.
 
-### 2. Configure
-
+### 2. Configure and build
 ```bash
-cmake -S . -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-To also build the IPC example:
-
+To also build the examples:
 ```bash
 cmake -S . -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DUI_BUILD_EXAMPLES=ON
-```
-
-### 3. Build
-
-```bash
 cmake --build build
 ```
 
-### 4. Run the example
-
+### 3. Run the example
 ```bash
 ./build/examples/ipc_example
 ```
@@ -77,19 +62,19 @@ cmake --build build
 
 ## macOS
 
-Install Xcode command-line tools and CMake — no extra package installs are
-needed because `WebKit.framework` and `Cocoa.framework` ship with the OS.
-
+Xcode command-line tools and CMake are all that is needed. WebKit and Cocoa
+ship with the OS.
 ```bash
 xcode-select --install
 brew install cmake ninja
 ```
-
 ```bash
 cmake -S . -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DUI_BUILD_EXAMPLES=ON
 cmake --build build
+```
+```bash
 ./build/examples/ipc_example
 ```
 
@@ -97,34 +82,40 @@ cmake --build build
 
 ## Windows
 
-WebView2 is installed via vcpkg (see first-time setup above). The runtime
-itself ships with Microsoft Edge and is already present on all modern
-Windows 10/11 machines — nothing extra to install.
+### 1. Download the WebView2 runtime (one-time)
 
-> **Air-gapped / kiosk machines** — if the target has no Edge, download and
-> run the [WebView2 Evergreen Standalone Installer](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
-> once on that machine.
-
-Fixed Version
-Select and package a specific version of the WebView2 Runtime with your application.
-
-
-```bash
-sudo apt install cabextract
-wget https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/24e2b740-e13d-4418-a307-89050e3921d1/Microsoft.WebView2.FixedVersionRuntime.146.0.3856.97.x64.cab -o webview2_runtime.cab
-
-
-mkdir webview2_runtime 
-cabextract -d webview2_runtime webview2_runtime.cab
+The WebView2 SDK (headers + import lib) comes from vcpkg automatically.
+The runtime binaries must be downloaded separately before your first build.
+Run this once from the repo root:
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup.ps1
 ```
 
-
-
+This downloads the runtime into `webview2_runtime\146.0.3856.97\`.
+To fetch a different version, pass `-Version`:
 ```bat
-cmake -S . -B build ^
-    -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake ^
-    -DCMAKE_BUILD_TYPE=Release ^
-    -DUI_BUILD_EXAMPLES=ON
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup.ps1 -Version 146.0.3856.97
+```
+
+### 2. Configure and build
+```bat
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUI_BUILD_EXAMPLES=ON
+cmake --build build
+```
+
+### 3. Run the example
+```bat
+build\examples\Debug\ipc_example.exe ^
+    --webview-runtime C:\Users\cloud\Desktop\ui\webview2_runtime\146.0.3856.97 ^
+    --load-file C:\Users\cloud\Desktop\ui\examples\index.html
+```
+
+For a Release build, swap `Debug` for `Release` in both the cmake configure
+step and the exe path:
+```bat
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DUI_BUILD_EXAMPLES=ON
 cmake --build build --config Release
-.\build\examples\ipc_example.exe
+build\examples\Release\ipc_example.exe ^
+    --webview-runtime webview2_runtime\146.0.3856.97 ^
+    --load-file examples\index.html
 ```
