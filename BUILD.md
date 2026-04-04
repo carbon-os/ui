@@ -187,5 +187,8 @@ a2ea2edce8d77f26b463f9e949c852982ffbfd56   ← versions/u-/ui.json "git-tree"
 
 git rev-parse HEAD
 441599f0b5c17c3dcd412a395019ffc851506d4a   ← portfile.cmake "REF"
-                                            ← terminal vcpkg-configuration.json "baseline"
+
+[run it after all changes]
+git rev-parse HEAD
+ ← terminal vcpkg-configuration.json "baseline"
 ```
