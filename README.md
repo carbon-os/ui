@@ -1,6 +1,9 @@
 # ui
 
-A modern cross-platform C++ library for building high performance desktop applications backed by the system's native webview — WebKit2GTK on Linux, WKWebView on macOS, and WebView2 on Windows. Write your interface once in HTML/CSS/JS and communicate with native C++ over a clean, typed IPC channel.
+A modern C++ UI library for building high-performance, cross-platform native desktop applications.
+
+Write your interface in HTML/CSS/JS and communicate with native C++ over a clean, typed IPC channel —
+backed by the system's native webview on every platform.
 
 ```bash
 git clone https://github.com/carbon-os/ui
@@ -40,34 +43,35 @@ int main()
 
 ---
 
-## Supported Platforms
+## Platforms
 
-| Platform | Webview Engine   | Minimum Version         | Architecture        |
-|----------|------------------|-------------------------|---------------------|
-| Linux    | WebKit2GTK 4.1   | GTK 3, GLib 2.56        | x86_64, arm64       |
-| macOS    | WKWebView        | macOS 11.0 Big Sur      | x86_64, arm64 (M1+) |
-| Windows  | WebView2         | Windows 10 1903+        | x86_64, arm64       |
+| Platform | Engine         | Minimum Version    | Architecture        |
+|----------|----------------|--------------------|---------------------|
+| Linux    | WebKit2GTK 4.1 | GTK 3, GLib 2.56   | x86_64, arm64       |
+| macOS    | WKWebView      | macOS 11 Big Sur   | x86_64, arm64 (M1+) |
+| Windows  | WebView2       | Windows 10 1903+   | x86_64, arm64       |
 
 ---
 
 ## Building
 
-Requires CMake 3.22+ and a C++20 compiler.
+Requires **CMake 3.22+** and a **C++20** compiler.
 
 ```bash
 cmake -B build
 cmake --build build
 ```
 
-To also build the examples:
+To include examples:
 
 ```bash
 cmake -B build -DUI_BUILD_EXAMPLES=ON
 cmake --build build
 ```
 
-### Linux dependencies
+### Dependencies
 
+**Linux**
 ```bash
 # Debian / Ubuntu
 sudo apt install libwebkit2gtk-4.1-dev
@@ -79,15 +83,15 @@ sudo dnf install webkit2gtk4.1-devel
 sudo pacman -S webkit2gtk-4.1
 ```
 
-### Windows dependencies
+**Windows**
 
-WebView2 is installed automatically on Windows 10 1903 and later. The SDK is pulled in via vcpkg:
+WebView2 is bundled with Windows 10 1903 and later. Pull in the SDK via vcpkg:
 
 ```bash
 vcpkg install webview2
 ```
 
-### macOS dependencies
+**macOS**
 
 WebKit ships with the OS — no additional dependencies required.
 
@@ -99,13 +103,16 @@ WebKit ships with the OS — no additional dependencies required.
 cmake --install build --prefix /usr/local
 ```
 
-This installs:
-- `libui.a` → `lib/`
-- `include/ui/webview.h`, `include/ui/message.h` → `include/`
-- `include/logger/logger.h` → `include/`
-- `lib/cmake/ui/ui-config.cmake` → for `find_package(ui)`
+Installs the following:
 
-Consuming the library from another CMake project:
+| Artifact | Destination |
+|---|---|
+| `libui.a` | `lib/` |
+| `include/ui/webview.h`, `include/ui/message.h` | `include/` |
+| `include/logger/logger.h` | `include/` |
+| `lib/cmake/ui/ui-config.cmake` | `lib/cmake/ui/` |
+
+Consuming from another CMake project:
 
 ```cmake
 find_package(ui REQUIRED)
@@ -119,46 +126,37 @@ target_link_libraries(my_app PRIVATE ui::ui)
 ### Configuration
 
 ```cpp
-ui::WebViewConfig config {
+ui::WebView wv({
     .title         = "my app",  // window title
     .width         = 1280,      // initial width in pixels
     .height        = 800,       // initial height in pixels
     .debug         = false,     // enable devtools
     .logging       = false,     // enable internal logger output
-    .runtime_path  = "",        // WebView2 only: custom runtime path
-    .user_data_dir = "",        // WebView2 only: custom user data directory
-    .browser_args  = "",        // WebView2 only: additional browser arguments
-};
-
-ui::WebView wv(config);
+    .runtime_path  = "",        // WebView2: custom runtime path
+    .user_data_dir = "",        // WebView2: custom user data directory
+    .browser_args  = "",        // WebView2: additional browser arguments
+});
 ```
 
-### Loading content
+### Loading Content
 
 ```cpp
-// Inline HTML — good for self-contained documents
-wv.load_html("<html>...</html>");
-
-// Local file — sibling assets (js, css, images) resolve automatically
-wv.load_file("path/to/index.html");
-
-// External URL
-wv.load_url("https://example.com");
+wv.load_html("<html>...</html>");   // inline HTML
+wv.load_file("path/to/index.html"); // local file — sibling assets resolve automatically
+wv.load_url("https://example.com"); // external URL
 ```
 
 ### IPC — C++ → JS
 
 ```cpp
-// Send a text message
 wv.post_message("channel", "hello");
 
-// Send binary data
+// Binary
 std::vector<uint8_t> data = { 0x01, 0x02, 0x03 };
 wv.post_message("channel", data);
 ```
 
 ```js
-// Receive in JS
 window.__ui.on("channel", (payload) => {
     if (payload instanceof ArrayBuffer) {
         // binary
@@ -171,23 +169,20 @@ window.__ui.on("channel", (payload) => {
 ### IPC — JS → C++
 
 ```js
-// Send text from JS
 window.__ui.post("channel", "hello");
 
-// Send binary from JS
+// Binary
 const buf = new Uint8Array([0x01, 0x02, 0x03]).buffer;
 window.__ui.post("channel", buf);
 ```
 
 ```cpp
-// Receive in C++
 wv.on_message("channel", [](ui::Message msg) {
     if (msg.is_text())   { auto s = msg.text(); }
     if (msg.is_binary()) { auto& d = msg.data(); }
 });
 
-// Unregister
-wv.off_message("channel");
+wv.off_message("channel"); // unregister
 ```
 
 ### Lifecycle
@@ -198,9 +193,7 @@ wv.on_ready([&] {
 });
 
 wv.on_close([&]() -> bool {
-    // return true  → allow the window to close
-    // return false → suppress the close
-    return true;
+    return true;  // true → allow close, false → suppress
 });
 
 wv.run();       // blocks until the window is closed
