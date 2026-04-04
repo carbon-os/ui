@@ -1,5 +1,23 @@
 # Building ui
 
+## First-time setup — clone vcpkg
+
+Run this once from the repo root:
+
+```bash
+git clone https://github.com/microsoft/vcpkg.git
+./vcpkg/bootstrap-vcpkg.sh    # Linux / macOS
+./vcpkg/vcpkg install
+```
+
+```bat
+git clone https://github.com/microsoft/vcpkg.git
+.\vcpkg\bootstrap-vcpkg.bat   # Windows
+.\vcpkg\vcpkg install
+```
+
+---
+
 ## Linux (Ubuntu / Debian)
 
 ### 1. System dependencies
@@ -28,8 +46,6 @@ sudo apt install -y \
 > On 20.04 (Focal) the package is `libwebkit2gtk-4.0-dev` and you must change
 > `webkit2gtk-4.1` to `webkit2gtk-4.0` in `CMakeLists.txt`.
 
----
-
 ### 2. Configure
 
 ```bash
@@ -45,15 +61,11 @@ cmake -S . -B build -G Ninja \
     -DUI_BUILD_EXAMPLES=ON
 ```
 
----
-
 ### 3. Build
 
 ```bash
 cmake --build build
 ```
-
----
 
 ### 4. Run the example
 
@@ -74,7 +86,9 @@ brew install cmake ninja
 ```
 
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DUI_BUILD_EXAMPLES=ON
+cmake -S . -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUI_BUILD_EXAMPLES=ON
 cmake --build build
 ./build/examples/ipc_example
 ```
@@ -83,11 +97,34 @@ cmake --build build
 
 ## Windows
 
-Install the [WebView2 SDK](https://developer.microsoft.com/microsoft-edge/webview2/)
-via NuGet and place `WebView2Loader.dll` somewhere on `PATH` (or next to the
-binary). Then configure with the Visual Studio generator:
+WebView2 is installed via vcpkg (see first-time setup above). The runtime
+itself ships with Microsoft Edge and is already present on all modern
+Windows 10/11 machines — nothing extra to install.
+
+> **Air-gapped / kiosk machines** — if the target has no Edge, download and
+> run the [WebView2 Evergreen Standalone Installer](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+> once on that machine.
+
+Fixed Version
+Select and package a specific version of the WebView2 Runtime with your application.
+
+
+```bash
+sudo apt install cabextract
+wget https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/24e2b740-e13d-4418-a307-89050e3921d1/Microsoft.WebView2.FixedVersionRuntime.146.0.3856.97.x64.cab -o webview2_runtime.cab
+
+
+mkdir webview2_runtime 
+cabextract -d webview2_runtime webview2_runtime.cab
+```
+
+
 
 ```bat
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DUI_BUILD_EXAMPLES=ON
+cmake -S . -B build ^
+    -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake ^
+    -DCMAKE_BUILD_TYPE=Release ^
+    -DUI_BUILD_EXAMPLES=ON
 cmake --build build --config Release
+.\build\examples\ipc_example.exe
 ```

@@ -1,0 +1,10 @@
+{
+  "name": "ui",
+  "version": "0.1.0",
+  "dependencies": [
+    {
+      "name": "webview2",
+      "platform": "windows"
+    }
+  ]
+}

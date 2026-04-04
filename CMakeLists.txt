@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
 
-# OBJCXX is only available on Apple — guard it to avoid probe failures on Linux/Windows
 if (APPLE)
     project(ui VERSION 0.1.0 LANGUAGES CXX OBJCXX)
 else()
@@ -11,22 +10,25 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# ── Logger (header-only, globally available to all targets) ───────────────────
+#
+#  logger/logger.h lives at the root of the repo. Adding the root as a
+#  global include dir means any target anywhere in the tree can do:
+#      #include <logger/logger.h>
+#  with no extra target_link_libraries needed.
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 # ── Sources ───────────────────────────────────────────────────────────────────
 
 set(UI_SOURCES)
 
 if (WIN32)
-    list(APPEND UI_SOURCES
-        src/win/webview.cpp
-    )
+    list(APPEND UI_SOURCES src/win/webview.cpp)
 elseif (APPLE)
-    list(APPEND UI_SOURCES
-        src/mac/webview.mm
-    )
+    list(APPEND UI_SOURCES src/mac/webview.mm)
 elseif (UNIX)
-    list(APPEND UI_SOURCES
-        src/linux/webview.cpp
-    )
+    list(APPEND UI_SOURCES src/linux/webview.cpp)
 else()
     message(FATAL_ERROR "ui: unsupported platform")
 endif()
@@ -44,8 +46,9 @@ target_include_directories(ui PUBLIC
 # ── Platform dependencies ─────────────────────────────────────────────────────
 
 if (WIN32)
+    find_package(unofficial-webview2 CONFIG REQUIRED)
     target_link_libraries(ui PRIVATE
-        "WebView2Loader.dll"
+        unofficial::webview2::webview2
         user32
         ole32
         shell32
@@ -92,6 +95,10 @@ install(TARGETS ui
 )
 
 install(DIRECTORY include/ui
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(DIRECTORY logger
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 

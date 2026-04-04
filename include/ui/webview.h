@@ -8,20 +8,24 @@
 
 namespace ui {
 
-// Forward-declared at namespace scope so the pimpl struct is reachable
-// from the free C callbacks in the .cpp without a private-access violation.
 struct WebViewImpl;
 
 struct WebViewConfig {
-    std::string title  = "ui";
-    int         width  = 1280;
-    int         height = 800;
-    bool        debug  = false;
+    std::string title    = "ui";
+    int         width    = 1280;
+    int         height   = 800;
+    bool        debug    = false;
+    bool        logging  = false;
+
+    std::string runtime_path;
+    std::string user_data_dir;
+    std::string browser_args;
 };
 
 class WebView {
 public:
     using MessageCallback = std::function<void(Message)>;
+    using ReadyCallback   = std::function<void()>;
     using CloseCallback   = std::function<bool()>;
 
     explicit WebView(WebViewConfig config = {});
@@ -32,27 +36,28 @@ public:
     WebView(WebView&&)                 = default;
     WebView& operator=(WebView&&)      = default;
 
-    // ── Navigation ────────────────────────────────────────────────────────────
-    void load_url(std::string_view url);
+    // Load inline HTML — origin becomes ui-ipc://app/
     void load_html(std::string_view html);
 
-    // ── Eval ──────────────────────────────────────────────────────────────────
+    // Load a local file; sibling assets resolve automatically under ui-ipc://app/
+    void load_file(std::string_view path);
+
+    // Load an external http/https URL — ui-ipc:// is rejected at the call site
+    void load_url(std::string_view url);
+
     void eval(std::string_view js);
 
-    // ── IPC: C++ → JS (channel based) ────────────────────────────────────────
     void post_message(std::string_view channel, std::string_view text);
     void post_message(std::string_view channel, const std::vector<uint8_t>& data);
 
-    // ── IPC: JS → C++ (channel based) ────────────────────────────────────────
     void on_message(std::string_view channel, MessageCallback cb);
     void off_message(std::string_view channel);
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    void on_ready(ReadyCallback cb);
     void on_close(CloseCallback cb);
     void run();
     void terminate();
 
-    // ── Window ────────────────────────────────────────────────────────────────
     void set_title(std::string_view title);
     void set_size(int width, int height);
 
