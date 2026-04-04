@@ -1,46 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# § 0  Auto-bootstrap vcpkg
-# ══════════════════════════════════════════════════════════════════════════════
-if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    find_program(GIT_EXECUTABLE git REQUIRED)
-
-    set(_VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg")
-
-    if(NOT EXISTS "${_VCPKG_ROOT}/.git")
-        message(STATUS "ui: cloning vcpkg ...")
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" clone --depth 1
-                    https://github.com/microsoft/vcpkg.git "${_VCPKG_ROOT}"
-            COMMAND_ERROR_IS_FATAL ANY
-        )
-    endif()
-
-    if(CMAKE_HOST_WIN32)
-        set(_VCPKG_EXE  "${_VCPKG_ROOT}/vcpkg.exe")
-        set(_VCPKG_BOOT cmd /c "${_VCPKG_ROOT}/bootstrap-vcpkg.bat" -disableMetrics)
-    else()
-        set(_VCPKG_EXE  "${_VCPKG_ROOT}/vcpkg")
-        set(_VCPKG_BOOT bash "${_VCPKG_ROOT}/bootstrap-vcpkg.sh" -disableMetrics)
-    endif()
-
-    if(NOT EXISTS "${_VCPKG_EXE}")
-        message(STATUS "ui: bootstrapping vcpkg ...")
-        execute_process(
-            COMMAND ${_VCPKG_BOOT}
-            WORKING_DIRECTORY "${_VCPKG_ROOT}"
-            COMMAND_ERROR_IS_FATAL ANY
-        )
-    endif()
-
-    set(CMAKE_TOOLCHAIN_FILE
-            "${_VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-            CACHE STRING "vcpkg toolchain" FORCE)
-    message(STATUS "ui: vcpkg toolchain -> ${CMAKE_TOOLCHAIN_FILE}")
-endif()
-
-# ══════════════════════════════════════════════════════════════════════════════
 # § 1  Project
 # ══════════════════════════════════════════════════════════════════════════════
 if(APPLE)
@@ -53,7 +13,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ── Sources ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# § 2  Sources
+# ══════════════════════════════════════════════════════════════════════════════
 set(UI_SOURCES)
 
 if(WIN32)
@@ -87,19 +49,23 @@ else()
     message(FATAL_ERROR "ui: unsupported platform")
 endif()
 
-# ── Library target ────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# § 3  Library target
+# ══════════════════════════════════════════════════════════════════════════════
 add_library(ui STATIC ${UI_SOURCES})
 add_library(ui::ui ALIAS ui)
 
-target_include_directories(ui PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-target_include_directories(ui PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
+target_include_directories(ui
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# ── Platform dependencies ─────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# § 4  Platform dependencies
+# ══════════════════════════════════════════════════════════════════════════════
 if(WIN32)
     find_package(unofficial-webview2 CONFIG REQUIRED)
     target_link_libraries(ui PRIVATE
@@ -121,31 +87,58 @@ elseif(UNIX)
     target_compile_options(ui PRIVATE ${WEBKIT_CFLAGS_OTHER})
 endif()
 
-# ── Compiler warnings ─────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# § 5  Compiler warnings
+# ══════════════════════════════════════════════════════════════════════════════
 if(MSVC)
     target_compile_options(ui PRIVATE /W4 /WX)
 else()
     target_compile_options(ui PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-# ── Optional: examples ────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# § 6  Optional: examples
+# ══════════════════════════════════════════════════════════════════════════════
 option(UI_BUILD_EXAMPLES "Build examples" OFF)
 if(UI_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-# ── Install ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# § 7  Install
+# ══════════════════════════════════════════════════════════════════════════════
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 install(TARGETS ui
-    EXPORT ui-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    EXPORT      ui-targets
+    ARCHIVE     DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
 install(EXPORT ui-targets
-    FILE ui-config.cmake
-    NAMESPACE ui::
+    FILE        ui-targets.cmake
+    NAMESPACE   ui::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ui
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/ui-config-version.cmake"
+    VERSION     ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ui-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ui-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ui
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/ui-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/ui-config-version.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ui
 )
