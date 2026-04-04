@@ -1,7 +1,7 @@
 vcpkg_from_git(
     OUT_SOURCE_PATH SOURCE_PATH
     URL             https://github.com/carbon-os/ui
-    REF             441599f0b5c17c3dcd412a395019ffc851506d4a
+    REF             18001b2dd98c87e93abb40c79e39067c8d5f3128
     HEAD_REF        main
 )
 

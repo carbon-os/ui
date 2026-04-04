@@ -169,3 +169,23 @@ target_link_libraries(my_app PRIVATE ui::ui)
 
 vcpkg will pull in webview2 automatically on Windows as a transitive
 dependency — no extra steps needed in the consuming app.
+
+
+## Updating port version hashes
+
+After any change to `ports/ui/`, run:
+```bash
+git rev-parse HEAD:ports/ui   # → goes into versions/u-/ui.json  "git-tree"
+git rev-parse HEAD            # → goes into portfile.cmake "REF"
+                              #   and terminal app vcpkg-configuration.json "baseline"
+```
+
+Example:
+```
+git rev-parse HEAD:ports/ui
+a2ea2edce8d77f26b463f9e949c852982ffbfd56   ← versions/u-/ui.json "git-tree"
+
+git rev-parse HEAD
+441599f0b5c17c3dcd412a395019ffc851506d4a   ← portfile.cmake "REF"
+                                            ← terminal vcpkg-configuration.json "baseline"
+```
