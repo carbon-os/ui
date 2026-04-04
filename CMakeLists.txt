@@ -10,25 +10,37 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ── Logger (header-only, globally available to all targets) ───────────────────
-#
-#  logger/logger.h lives at the root of the repo. Adding the root as a
-#  global include dir means any target anywhere in the tree can do:
-#      #include <logger/logger.h>
-#  with no extra target_link_libraries needed.
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 # ── Sources ───────────────────────────────────────────────────────────────────
 
 set(UI_SOURCES)
 
 if (WIN32)
-    list(APPEND UI_SOURCES src/win/webview.cpp)
+    list(APPEND UI_SOURCES
+        src/win/webview.cpp
+        src/win/scheme.cpp
+        src/win/navigation.cpp
+        src/win/ipc.cpp
+        src/win/lifecycle.cpp
+        src/win/window.cpp
+    )
 elseif (APPLE)
-    list(APPEND UI_SOURCES src/mac/webview.mm)
+    list(APPEND UI_SOURCES
+        src/mac/webview.mm
+        src/mac/delegates.mm
+        src/mac/navigation.mm
+        src/mac/ipc.mm
+        src/mac/lifecycle.mm
+        src/mac/window.mm
+    )
 elseif (UNIX)
-    list(APPEND UI_SOURCES src/linux/webview.cpp)
+    list(APPEND UI_SOURCES
+        src/linux/webview.cpp
+        src/linux/scheme.cpp
+        src/linux/navigation.cpp
+        src/linux/ipc.cpp
+        src/linux/lifecycle.cpp
+        src/linux/window.cpp
+    )
 else()
     message(FATAL_ERROR "ui: unsupported platform")
 endif()
@@ -38,9 +50,15 @@ endif()
 add_library(ui STATIC ${UI_SOURCES})
 add_library(ui::ui ALIAS ui)
 
+# include/ is public: consumers get <ui/webview.h> and <logger/logger.h>
 target_include_directories(ui PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
+)
+
+# src/ is private: platform files get <shared/helpers.h> and <shared/shim.h>
+target_include_directories(ui PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # ── Platform dependencies ─────────────────────────────────────────────────────
@@ -94,11 +112,7 @@ install(TARGETS ui
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-install(DIRECTORY include/ui
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-install(DIRECTORY logger
+install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 

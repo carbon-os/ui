@@ -2,9 +2,27 @@
 
 #include <cstdint>
 #include <cstdio>
-#include <filesystem>
 #include <string>
 #include <vector>
+
+#ifndef _WIN32
+#include <filesystem>
+#endif
+
+#ifdef _WIN32
+static constexpr const char* k_runtime_path =
+    "C:\\Users\\cloud\\Downloads\\webview2_runtime\\"
+    "Microsoft.WebView2.FixedVersionRuntime.146.0.3856.97.x64";
+
+static constexpr const char* k_user_data_dir =
+    "C:\\Users\\cloud\\AppData\\Local\\ipc_example_wv2";
+
+static constexpr const char* k_browser_args =
+    "--user-agent=\"IpcExample/1.0 "
+    "(Windows NT; WebView2/146) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/146.0.0.0 Safari/537.36\"";
+#endif
 
 int main()
 {
@@ -14,6 +32,11 @@ int main()
         .height  = 640,
         .debug   = true,
         .logging = true,
+#ifdef _WIN32
+        .runtime_path  = k_runtime_path,
+        .user_data_dir = k_user_data_dir,
+        .browser_args  = k_browser_args,
+#endif
     });
 
     // ── JS → C++: plain text on "ping" ───────────────────────────────────────
@@ -42,9 +65,13 @@ int main()
 
     // ── Ready: navigate via load_file — sibling assets resolve automatically ──
     wv.on_ready([&wv]() {
+#ifdef _WIN32
+        wv.load_file("C:\\Users\\cloud\\Downloads\\ui\\examples\\index.html");
+#else
         std::filesystem::path html =
             std::filesystem::path(__FILE__).parent_path() / "index.html";
         wv.load_file(html.lexically_normal().string());
+#endif
     });
 
     // ── Close ─────────────────────────────────────────────────────────────────
