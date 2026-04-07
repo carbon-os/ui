@@ -62,11 +62,10 @@ public:
     void set_title(std::string_view title);
     void set_size(int width, int height);
 
-private:
-    // Drains post_queue on the UI thread.
-    // Called from wnd_proc (Windows) via impl_->owner, never directly by callers.
+    // Internal — called only by wnd_proc on the UI thread. Do not call directly.
     void drain_post_queue();
 
+private:
     WebViewImpl* impl_;
 };
 

@@ -32,6 +32,7 @@ struct OutboundFrame {
 
 struct WebViewImpl {
     HWND                             hwnd       = nullptr;
+    WebView*                         owner      = nullptr;
     ComPtr<ICoreWebView2Environment> env;
     ComPtr<ICoreWebView2Controller>  controller;
     ComPtr<ICoreWebView2>            webview;

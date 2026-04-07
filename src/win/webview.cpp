@@ -24,6 +24,8 @@ namespace ui {
 
 WebView::WebView(WebViewConfig config) : impl_(new WebViewImpl())
 {
+    impl_->owner = this;
+
     if (config.logging)
         logger::SetEnabled(true);
 
