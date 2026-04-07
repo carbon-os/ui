@@ -1,6 +1,4 @@
 {
-  "name": "ui",
-  "version": "0.1.0",
   "dependencies": [
     "vcpkg-cmake",
     "vcpkg-cmake-config",
@@ -8,5 +6,7 @@
       "name": "webview2",
       "platform": "windows"
     }
-  ]
+  ],
+  "name": "ui",
+  "version": "0.1.1"
 }
