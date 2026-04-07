@@ -47,6 +47,7 @@ public:
 
     void eval(std::string_view js);
 
+    // Thread-safe — may be called from any thread
     void post_message(std::string_view channel, std::string_view text);
     void post_message(std::string_view channel, const std::vector<uint8_t>& data);
 
@@ -62,6 +63,10 @@ public:
     void set_size(int width, int height);
 
 private:
+    // Drains post_queue on the UI thread.
+    // Called from wnd_proc (Windows) via impl_->owner, never directly by callers.
+    void drain_post_queue();
+
     WebViewImpl* impl_;
 };
 

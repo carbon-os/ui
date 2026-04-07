@@ -8,14 +8,30 @@
 
 namespace ui {
 
-// ── WndProc ───────────────────────────────────────────────────────────────────
-//
-// Defined here and extern'd into webview.cpp rather than being a free static,
-// so it has natural access to the WebViewImpl type without a forward declare.
+static constexpr UINT kMsgFlush = WM_APP + 1;
 
 LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     auto* impl = reinterpret_cast<WebViewImpl*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+
+    if (msg == kMsgFlush) {
+        // Background thread enqueued one or more frames — drain them all now
+        // that we're on the UI thread.  Coalesce any extra WM_APP+1 messages
+        // that may have stacked up while we were already draining.
+        if (impl && impl->webview) {
+            MSG extra;
+            while (PeekMessageW(&extra, hwnd, kMsgFlush, kMsgFlush, PM_REMOVE))
+                ; // discard redundant wake-ups before draining once
+            // WebView::drain_post_queue is a private method; expose via a
+            // free friend or a small forwarding helper defined in ipc.cpp.
+            // Simplest: call through the stored WebView pointer on the impl.
+            // We reach it via the GWLP_USERDATA chain set in webview.cpp.
+            // (See note below — we store the WebView* alongside impl.)
+            if (impl->owner)
+                impl->owner->drain_post_queue();
+        }
+        return 0;
+    }
 
     if (msg == WM_SIZE && impl && impl->controller) {
         RECT rc;

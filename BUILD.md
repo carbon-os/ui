@@ -109,8 +109,8 @@ cmake --build build
 #### 4. Run the example
 ```bat
 build\examples\Debug\ipc_example.exe ^
-    --webview-runtime webview2_runtime\146.0.3856.97 ^
-    --load-file examples\index.html
+    --webview-runtime C:\Users\cloud\Desktop\ui\webview2_runtime\146.0.3856.97 ^
+    --load-file C:\Users\cloud\Desktop\ui\examples\index.html
 ```
 
 For a Release build:
